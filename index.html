@@ -1,440 +1,569 @@
-import React, { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Trash2, Users, Shield, Sword, PlusCircle, AlertTriangle } from "lucide-react";
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Horntail 組隊小工具</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+      background: #f3f6fb;
+      color: #1f2937;
+    }
+    .wrap {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+    }
+    .sub {
+      color: #6b7280;
+      margin-bottom: 24px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 20px;
+    }
+    .right-col {
+      display: grid;
+      gap: 20px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #dbe3ef;
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      padding: 20px;
+    }
+    .card-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    input, select, button {
+      font: inherit;
+    }
+    input, select {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fff;
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .btn-danger {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .player-list, .team-members, .constraint-list {
+      display: grid;
+      gap: 12px;
+    }
+    .player-item, .member-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid #dbe3ef;
+      border-radius: 16px;
+      padding: 14px;
+      background: #fff;
+    }
+    .player-item.assigned {
+      background: #f1f5f9;
+      opacity: 0.65;
+    }
+    .player-main {
+      min-width: 0;
+    }
+    .player-name {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .meta {
+      font-size: 14px;
+      color: #6b7280;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-weight: 700;
+    }
+    .team-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .team-drop {
+      min-height: 180px;
+      border: 2px dashed #cbd5e1;
+      border-radius: 16px;
+      padding: 12px;
+      background: #f8fafc;
+      margin-bottom: 16px;
+    }
+    .team-drop.drag-over {
+      border-color: #2563eb;
+      background: #eff6ff;
+    }
+    .empty {
+      height: 140px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+      text-align: center;
+      padding: 12px;
+    }
+    .constraint-row {
+      display: grid;
+      grid-template-columns: 1fr 100px 80px;
+      gap: 8px;
+      align-items: center;
+    }
+    .warn {
+      margin-top: 14px;
+      background: #fff7ed;
+      border: 1px solid #fdba74;
+      color: #9a3412;
+      border-radius: 14px;
+      padding: 12px;
+      font-size: 14px;
+    }
+    .foot {
+      margin-top: 20px;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .small {
+      font-size: 14px;
+      color: #6b7280;
+    }
+    @media (max-width: 1024px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 720px) {
+      .wrap { padding: 16px; }
+      .form-grid { grid-template-columns: 1fr 1fr; }
+      .constraint-row { grid-template-columns: 1fr 90px 64px; }
+      .player-item, .member-item {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .actions { justify-content: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Horntail 組隊小工具</h1>
+    <div class="sub">可建立人物資料、拖拉分隊、限制職業組成。每隊最多 6 人。</div>
 
-const JOB_OPTIONS = [
-  "黑騎士",
-  "主教",
-  "箭神",
-  "神射手",
-  "夜使者",
-  "暗影神偷",
-  "英雄",
-  "聖騎士",
-  "冰雷",
-  "火毒",
-  "槍神",
-  "拳霸",
-  "其他",
-];
+    <div class="layout">
+      <div class="card">
+        <div class="card-title">人物資料庫</div>
 
-const emptyForm = {
-  name: "",
-  level: "",
-  job: "黑騎士",
-  power: "",
-};
-
-const createConstraint = () => ({
-  id: crypto.randomUUID(),
-  job: "黑騎士",
-  min: 1,
-});
-
-export default function HorntailRaidTeamBuilder() {
-  const [characters, setCharacters] = useState([]);
-  const [form, setForm] = useState(emptyForm);
-  const [draggingId, setDraggingId] = useState(null);
-  const [teams, setTeams] = useState({
-    A: { members: [], constraints: [createConstraint()] },
-    B: { members: [], constraints: [] },
-  });
-
-  const assignedIds = useMemo(
-    () => new Set([...teams.A.members, ...teams.B.members]),
-    [teams]
-  );
-
-  const availableCharacters = useMemo(
-    () => characters.filter((c) => !assignedIds.has(c.id)),
-    [characters, assignedIds]
-  );
-
-  const getCharacter = (id) => characters.find((c) => c.id === id);
-
-  const addCharacter = () => {
-    if (!form.name.trim() || !form.level || !form.power) return;
-
-    const newCharacter = {
-      id: crypto.randomUUID(),
-      name: form.name.trim(),
-      level: Number(form.level),
-      job: form.job,
-      power: Number(form.power),
-    };
-
-    setCharacters((prev) => [...prev, newCharacter]);
-    setForm(emptyForm);
-  };
-
-  const removeCharacter = (id) => {
-    setCharacters((prev) => prev.filter((c) => c.id !== id));
-    setTeams((prev) => ({
-      A: { ...prev.A, members: prev.A.members.filter((m) => m !== id) },
-      B: { ...prev.B, members: prev.B.members.filter((m) => m !== id) },
-    }));
-  };
-
-  const moveToTeam = (characterId, teamKey) => {
-    setTeams((prev) => {
-      const target = prev[teamKey];
-      if (target.members.includes(characterId)) return prev;
-      if (target.members.length >= 6) return prev;
-
-      const otherKey = teamKey === "A" ? "B" : "A";
-      return {
-        ...prev,
-        [teamKey]: {
-          ...target,
-          members: [...target.members, characterId],
-        },
-        [otherKey]: {
-          ...prev[otherKey],
-          members: prev[otherKey].members.filter((id) => id !== characterId),
-        },
-      };
-    });
-  };
-
-  const removeFromTeam = (characterId, teamKey) => {
-    setTeams((prev) => ({
-      ...prev,
-      [teamKey]: {
-        ...prev[teamKey],
-        members: prev[teamKey].members.filter((id) => id !== characterId),
-      },
-    }));
-  };
-
-  const addConstraint = (teamKey) => {
-    setTeams((prev) => ({
-      ...prev,
-      [teamKey]: {
-        ...prev[teamKey],
-        constraints: [...prev[teamKey].constraints, createConstraint()],
-      },
-    }));
-  };
-
-  const updateConstraint = (teamKey, constraintId, patch) => {
-    setTeams((prev) => ({
-      ...prev,
-      [teamKey]: {
-        ...prev[teamKey],
-        constraints: prev[teamKey].constraints.map((c) =>
-          c.id === constraintId ? { ...c, ...patch } : c
-        ),
-      },
-    }));
-  };
-
-  const removeConstraint = (teamKey, constraintId) => {
-    setTeams((prev) => ({
-      ...prev,
-      [teamKey]: {
-        ...prev[teamKey],
-        constraints: prev[teamKey].constraints.filter((c) => c.id !== constraintId),
-      },
-    }));
-  };
-
-  const getTeamStats = (teamKey) => {
-    const members = teams[teamKey].members
-      .map((id) => getCharacter(id))
-      .filter(Boolean);
-
-    const totalPower = members.reduce((sum, c) => sum + (c.power || 0), 0);
-    const jobs = members.reduce((acc, c) => {
-      acc[c.job] = (acc[c.job] || 0) + 1;
-      return acc;
-    }, {});
-
-    const failedConstraints = teams[teamKey].constraints.filter(
-      (rule) => (jobs[rule.job] || 0) < Number(rule.min || 0)
-    );
-
-    return { members, totalPower, jobs, failedConstraints };
-  };
-
-  const TeamPanel = ({ teamKey }) => {
-    const team = teams[teamKey];
-    const { members, totalPower, failedConstraints } = getTeamStats(teamKey);
-
-    return (
-      <Card
-        className="rounded-2xl border shadow-sm"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault();
-          if (draggingId) moveToTeam(draggingId, teamKey);
-          setDraggingId(null);
-        }}
-      >
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Users className="h-5 w-5" />
-              {teamKey} 隊伍
-            </CardTitle>
-            <Badge variant="secondary">{members.length}/6 人</Badge>
+        <div class="form-grid">
+          <div>
+            <label for="name">名稱</label>
+            <input id="name" type="text" placeholder="例如：彬的黑騎" />
           </div>
-          <div className="text-sm text-muted-foreground">總表功：{totalPower.toLocaleString()}</div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div className="min-h-[220px] rounded-2xl border border-dashed p-3">
-            {members.length === 0 ? (
-              <div className="flex h-[180px] items-center justify-center text-sm text-muted-foreground">
-                把人物拖拉到這裡
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {members.map((member) => (
-                  <div
-                    key={member.id}
-                    draggable
-                    onDragStart={() => setDraggingId(member.id)}
-                    onDragEnd={() => setDraggingId(null)}
-                    className="flex items-center justify-between rounded-2xl border bg-white p-3 shadow-sm"
-                  >
-                    <div className="space-y-1">
-                      <div className="font-semibold">{member.name}</div>
-                      <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                        <span>Lv.{member.level}</span>
-                        <span>{member.job}</span>
-                        <span>表功 {member.power.toLocaleString()}</span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeFromTeam(member.id, teamKey)}
-                    >
-                      移出
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div>
+            <label for="level">等級</label>
+            <input id="level" type="number" placeholder="200" />
           </div>
-
-          <div className="space-y-3 rounded-2xl border p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-medium">
-                <Shield className="h-4 w-4" />
-                隊伍職業限制
-              </div>
-              <Button variant="outline" size="sm" onClick={() => addConstraint(teamKey)}>
-                <PlusCircle className="mr-1 h-4 w-4" />新增限制
-              </Button>
-            </div>
-
-            {team.constraints.length === 0 ? (
-              <div className="text-sm text-muted-foreground">尚未設定限制</div>
-            ) : (
-              <div className="space-y-2">
-                {team.constraints.map((rule) => (
-                  <div key={rule.id} className="grid grid-cols-12 gap-2">
-                    <div className="col-span-7">
-                      <Select
-                        value={rule.job}
-                        onValueChange={(value) => updateConstraint(teamKey, rule.id, { job: value })}
-                      >
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {JOB_OPTIONS.map((job) => (
-                            <SelectItem key={job} value={job}>
-                              {job}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-3">
-                      <Input
-                        type="number"
-                        min="1"
-                        value={rule.min}
-                        onChange={(e) =>
-                          updateConstraint(teamKey, rule.id, {
-                            min: Math.max(1, Number(e.target.value || 1)),
-                          })
-                        }
-                        className="rounded-xl"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeConstraint(teamKey, rule.id)}
-                        className="w-full rounded-xl"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {failedConstraints.length > 0 && (
-              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-                <div className="mb-2 flex items-center gap-2 font-medium">
-                  <AlertTriangle className="h-4 w-4" />
-                  目前未符合條件
-                </div>
-                <div className="space-y-1">
-                  {failedConstraints.map((rule) => (
-                    <div key={rule.id}>至少需要 {rule.min} 位 {rule.job}</div>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div>
+            <label for="job">職業</label>
+            <select id="job"></select>
           </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
-      <div className="mx-auto grid max-w-7xl gap-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Horntail 組隊小工具</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            先建立人物資料，再拖拉到 A / B 隊伍。每隊最多 6 人，並可自訂職業組成限制。
-          </p>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <Card className="rounded-2xl border shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <Sword className="h-5 w-5" />
-                人物資料庫
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid gap-3 md:grid-cols-4">
-                <div className="space-y-2">
-                  <Label>名稱</Label>
-                  <Input
-                    value={form.name}
-                    onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="例如：彬的黑騎"
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>等級</Label>
-                  <Input
-                    type="number"
-                    value={form.level}
-                    onChange={(e) => setForm((prev) => ({ ...prev, level: e.target.value }))}
-                    placeholder="200"
-                    className="rounded-xl"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>職業</Label>
-                  <Select
-                    value={form.job}
-                    onValueChange={(value) => setForm((prev) => ({ ...prev, job: value }))}
-                  >
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {JOB_OPTIONS.map((job) => (
-                        <SelectItem key={job} value={job}>
-                          {job}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>表功</Label>
-                  <Input
-                    type="number"
-                    value={form.power}
-                    onChange={(e) => setForm((prev) => ({ ...prev, power: e.target.value }))}
-                    placeholder="2500000"
-                    className="rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <Button onClick={addCharacter} className="rounded-xl">
-                新增人物
-              </Button>
-
-              <div className="space-y-3">
-                {characters.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">
-                    還沒有人物資料，先新增幾筆試試看。
-                  </div>
-                ) : (
-                  characters.map((character) => {
-                    const assigned = assignedIds.has(character.id);
-                    return (
-                      <div
-                        key={character.id}
-                        draggable
-                        onDragStart={() => !assigned && setDraggingId(character.id)}
-                        onDragEnd={() => setDraggingId(null)}
-                        className={`flex items-center justify-between rounded-2xl border p-3 shadow-sm transition ${
-                          assigned ? "bg-slate-100 opacity-60" : "bg-white"
-                        }`}
-                      >
-                        <div className="space-y-1">
-                          <div className="font-semibold">{character.name}</div>
-                          <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                            <span>Lv.{character.level}</span>
-                            <span>{character.job}</span>
-                            <span>表功 {character.power.toLocaleString()}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {assigned ? <Badge variant="secondary">已編入隊伍</Badge> : <Badge>可拖拉</Badge>}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeCharacter(character.id)}
-                            className="rounded-xl"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-6">
-            <TeamPanel teamKey="A" />
-            <TeamPanel teamKey="B" />
+          <div>
+            <label for="power">表功</label>
+            <input id="power" type="number" placeholder="2500000" />
           </div>
         </div>
 
-        <Card className="rounded-2xl border shadow-sm">
-          <CardContent className="pt-6 text-sm text-muted-foreground">
-            目前功能：人物資料建立、拖拉分隊、每隊最多 6 人、隊伍職業限制檢查。
-            下一步很適合再加：自動儲存、隊伍總表功比較、輸出隊伍名單、依表功排序。
-          </CardContent>
-        </Card>
+        <button class="btn-primary" id="addPlayerBtn">新增人物</button>
+
+        <div style="height:16px"></div>
+        <div class="player-list" id="playerList"></div>
+      </div>
+
+      <div class="right-col">
+        <div class="card" id="teamA"></div>
+        <div class="card" id="teamB"></div>
       </div>
     </div>
-  );
-}
+
+    <div class="card foot">
+      這是純 HTML / CSS / JavaScript 版，直接存成 <b>index.html</b> 就能開，也可以直接丟到 GitHub Pages。
+    </div>
+  </div>
+
+  <script>
+    const JOB_OPTIONS = [
+      "黑騎士", "主教", "箭神", "神射手", "夜使者", "暗影神偷",
+      "英雄", "聖騎士", "冰雷", "火毒", "槍神", "拳霸", "其他"
+    ];
+
+    const players = [];
+    const teams = {
+      A: { members: [], constraints: [{ id: uid(), job: "黑騎士", min: 1 }] },
+      B: { members: [], constraints: [] }
+    };
+
+    let draggingPlayerId = null;
+
+    const jobSelect = document.getElementById("job");
+    const nameInput = document.getElementById("name");
+    const levelInput = document.getElementById("level");
+    const powerInput = document.getElementById("power");
+    const addPlayerBtn = document.getElementById("addPlayerBtn");
+    const playerList = document.getElementById("playerList");
+    const teamAEl = document.getElementById("teamA");
+    const teamBEl = document.getElementById("teamB");
+
+    init();
+
+    function init() {
+      JOB_OPTIONS.forEach(job => {
+        const option = document.createElement("option");
+        option.value = job;
+        option.textContent = job;
+        jobSelect.appendChild(option);
+      });
+
+      addPlayerBtn.addEventListener("click", addPlayer);
+      renderAll();
+    }
+
+    function uid() {
+      return Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    function addPlayer() {
+      const name = nameInput.value.trim();
+      const level = Number(levelInput.value);
+      const job = jobSelect.value;
+      const power = Number(powerInput.value);
+
+      if (!name) {
+        alert("請輸入人物名稱");
+        return;
+      }
+      if (!level || level < 1) {
+        alert("請輸入正確等級");
+        return;
+      }
+      if (!power || power < 0) {
+        alert("請輸入正確表功");
+        return;
+      }
+
+      players.push({ id: uid(), name, level, job, power });
+
+      nameInput.value = "";
+      levelInput.value = "";
+      powerInput.value = "";
+      jobSelect.value = JOB_OPTIONS[0];
+
+      renderAll();
+    }
+
+    function removePlayer(playerId) {
+      const index = players.findIndex(p => p.id === playerId);
+      if (index >= 0) players.splice(index, 1);
+      removeFromTeam(playerId, "A", false);
+      removeFromTeam(playerId, "B", false);
+      renderAll();
+    }
+
+    function assignedTeam(playerId) {
+      if (teams.A.members.includes(playerId)) return "A";
+      if (teams.B.members.includes(playerId)) return "B";
+      return null;
+    }
+
+    function moveToTeam(playerId, teamKey) {
+      const team = teams[teamKey];
+      const otherKey = teamKey === "A" ? "B" : "A";
+
+      if (team.members.includes(playerId)) return;
+      if (team.members.length >= 6) {
+        alert(teamKey + " 隊已滿 6 人");
+        return;
+      }
+
+      teams[otherKey].members = teams[otherKey].members.filter(id => id !== playerId);
+      team.members.push(playerId);
+      renderAll();
+    }
+
+    function removeFromTeam(playerId, teamKey, rerender = true) {
+      teams[teamKey].members = teams[teamKey].members.filter(id => id !== playerId);
+      if (rerender) renderAll();
+    }
+
+    function getPlayer(playerId) {
+      return players.find(p => p.id === playerId);
+    }
+
+    function addConstraint(teamKey) {
+      teams[teamKey].constraints.push({ id: uid(), job: "黑騎士", min: 1 });
+      renderAll();
+    }
+
+    function updateConstraint(teamKey, constraintId, field, value) {
+      const rule = teams[teamKey].constraints.find(c => c.id === constraintId);
+      if (!rule) return;
+      rule[field] = value;
+      renderAll();
+    }
+
+    function removeConstraint(teamKey, constraintId) {
+      teams[teamKey].constraints = teams[teamKey].constraints.filter(c => c.id !== constraintId);
+      renderAll();
+    }
+
+    function getTeamStats(teamKey) {
+      const members = teams[teamKey].members.map(getPlayer).filter(Boolean);
+      const totalPower = members.reduce((sum, p) => sum + p.power, 0);
+      const jobCount = {};
+
+      members.forEach(member => {
+        jobCount[member.job] = (jobCount[member.job] || 0) + 1;
+      });
+
+      const failed = teams[teamKey].constraints.filter(rule => {
+        return (jobCount[rule.job] || 0) < Number(rule.min || 0);
+      });
+
+      return { members, totalPower, failed };
+    }
+
+    function renderAll() {
+      renderPlayers();
+      renderTeam("A", teamAEl);
+      renderTeam("B", teamBEl);
+    }
+
+    function renderPlayers() {
+      playerList.innerHTML = "";
+
+      if (players.length === 0) {
+        playerList.innerHTML = '<div class="card small">還沒有人物資料，先新增幾筆試試看。</div>';
+        return;
+      }
+
+      players.forEach(player => {
+        const assigned = assignedTeam(player.id);
+        const item = document.createElement("div");
+        item.className = "player-item" + (assigned ? " assigned" : "");
+        item.draggable = !assigned;
+
+        item.addEventListener("dragstart", () => {
+          if (!assigned) draggingPlayerId = player.id;
+        });
+        item.addEventListener("dragend", () => {
+          draggingPlayerId = null;
+        });
+
+        item.innerHTML = `
+          <div class="player-main">
+            <div class="player-name">${escapeHtml(player.name)}</div>
+            <div class="meta">
+              <span>Lv.${player.level}</span>
+              <span>${escapeHtml(player.job)}</span>
+              <span>表功 ${player.power.toLocaleString()}</span>
+            </div>
+          </div>
+          <div class="actions">
+            <span class="tag">${assigned ? "已編入 " + assigned + " 隊" : "可拖拉 / 可加入"}</span>
+            <button class="btn-secondary" ${assigned ? "disabled" : ""} data-add-team="A">加入A</button>
+            <button class="btn-secondary" ${assigned ? "disabled" : ""} data-add-team="B">加入B</button>
+            <button class="btn-danger">刪除</button>
+          </div>
+        `;
+
+        item.querySelector('[data-add-team="A"]').addEventListener("click", () => moveToTeam(player.id, "A"));
+        item.querySelector('[data-add-team="B"]').addEventListener("click", () => moveToTeam(player.id, "B"));
+        item.querySelector('.btn-danger').addEventListener("click", () => removePlayer(player.id));
+
+        playerList.appendChild(item);
+      });
+    }
+
+    function renderTeam(teamKey, root) {
+      const { members, totalPower, failed } = getTeamStats(teamKey);
+
+      root.innerHTML = `
+        <div class="team-head">
+          <div>
+            <div class="card-title" style="margin-bottom:6px;">${teamKey} 隊伍</div>
+            <div class="small">總表功：${totalPower.toLocaleString()}</div>
+          </div>
+          <span class="tag">${members.length}/6 人</span>
+        </div>
+
+        <div class="team-drop" id="drop-${teamKey}">
+          ${members.length === 0 ? '<div class="empty">把人物拖拉到這裡，或從左側直接按加入按鈕</div>' : '<div class="team-members"></div>'}
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+          <div class="card-title" style="font-size:18px;margin:0;">隊伍職業限制</div>
+          <button class="btn-secondary" id="add-rule-${teamKey}">新增限制</button>
+        </div>
+        <div class="constraint-list" id="rules-${teamKey}"></div>
+        ${failed.length ? '<div class="warn" id="warn-' + teamKey + '"></div>' : ''}
+      `;
+
+      const drop = root.querySelector(`#drop-${teamKey}`);
+      drop.addEventListener("dragover", e => {
+        e.preventDefault();
+        drop.classList.add("drag-over");
+      });
+      drop.addEventListener("dragleave", () => {
+        drop.classList.remove("drag-over");
+      });
+      drop.addEventListener("drop", e => {
+        e.preventDefault();
+        drop.classList.remove("drag-over");
+        if (draggingPlayerId) moveToTeam(draggingPlayerId, teamKey);
+        draggingPlayerId = null;
+      });
+
+      root.querySelector(`#add-rule-${teamKey}`).addEventListener("click", () => addConstraint(teamKey));
+
+      if (members.length > 0) {
+        const membersWrap = root.querySelector(".team-members");
+        members.forEach(member => {
+          const row = document.createElement("div");
+          row.className = "member-item";
+          row.draggable = true;
+          row.addEventListener("dragstart", () => { draggingPlayerId = member.id; });
+          row.addEventListener("dragend", () => { draggingPlayerId = null; });
+
+          row.innerHTML = `
+            <div class="player-main">
+              <div class="player-name">${escapeHtml(member.name)}</div>
+              <div class="meta">
+                <span>Lv.${member.level}</span>
+                <span>${escapeHtml(member.job)}</span>
+                <span>表功 ${member.power.toLocaleString()}</span>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn-secondary">移出</button>
+            </div>
+          `;
+          row.querySelector("button").addEventListener("click", () => removeFromTeam(member.id, teamKey));
+          membersWrap.appendChild(row);
+        });
+      }
+
+      const rulesWrap = root.querySelector(`#rules-${teamKey}`);
+      if (teams[teamKey].constraints.length === 0) {
+        rulesWrap.innerHTML = '<div class="small">尚未設定限制</div>';
+      } else {
+        teams[teamKey].constraints.forEach(rule => {
+          const row = document.createElement("div");
+          row.className = "constraint-row";
+
+          const jobSelect = document.createElement("select");
+          JOB_OPTIONS.forEach(job => {
+            const option = document.createElement("option");
+            option.value = job;
+            option.textContent = job;
+            if (job === rule.job) option.selected = true;
+            jobSelect.appendChild(option);
+          });
+          jobSelect.addEventListener("change", e => updateConstraint(teamKey, rule.id, "job", e.target.value));
+
+          const minInput = document.createElement("input");
+          minInput.type = "number";
+          minInput.min = "1";
+          minInput.value = rule.min;
+          minInput.addEventListener("change", e => {
+            const value = Math.max(1, Number(e.target.value || 1));
+            updateConstraint(teamKey, rule.id, "min", value);
+          });
+
+          const delBtn = document.createElement("button");
+          delBtn.className = "btn-danger";
+          delBtn.textContent = "刪除";
+          delBtn.addEventListener("click", () => removeConstraint(teamKey, rule.id));
+
+          row.appendChild(jobSelect);
+          row.appendChild(minInput);
+          row.appendChild(delBtn);
+          rulesWrap.appendChild(row);
+        });
+      }
+
+      if (failed.length) {
+        const warn = root.querySelector(`#warn-${teamKey}`);
+        warn.innerHTML = '<b>目前未符合條件：</b><br>' + failed.map(rule => `至少需要 ${rule.min} 位 ${escapeHtml(rule.job)}`).join("<br>");
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
