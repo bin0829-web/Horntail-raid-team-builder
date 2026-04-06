@@ -55,6 +55,7 @@
     }
     .readonly { background: #dbeafe; color: #1d4ed8; }
     .editable { background: #dcfce7; color: #15803d; }
+
     .layout {
       display: grid;
       grid-template-columns: 1.15fr 0.85fr;
@@ -242,9 +243,7 @@
       border: 1px solid #dbe3ef;
       border-radius: 16px;
       padding: 14px 16px;
-    }
-    .share-link-box {
-      word-break: break-all;
+      line-height: 1.7;
     }
     @media (max-width: 1024px) {
       .layout { grid-template-columns: 1fr; }
@@ -263,23 +262,24 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>Horntail 組隊小工具</h1>
+    <h1 id="pageTitle">Horntail 組隊小工具</h1>
     <div class="sub">Firebase 分享版：有連結即可看，輸入編輯密碼後才能修改。</div>
 
     <div class="topbar">
       <div class="status-row">
         <div id="modeBadge" class="mode-badge readonly">🔵 唯讀模式</div>
-        <div class="small" id="roomIdText">房間 ID：建立中...</div>
+        <div class="small" id="roomIdText">房間 ID：讀取中...</div>
       </div>
       <div class="inline-actions">
         <button class="btn-outline" id="copyLinkBtn">複製分享連結</button>
+        <button class="btn-outline" id="backCreateBtn">建立新房間</button>
         <button class="btn-secondary" id="unlockBtn">進入編輯模式</button>
         <button class="btn-secondary" id="lockBtn" style="display:none;">鎖定</button>
       </div>
     </div>
 
     <div class="card" style="margin-bottom:20px;">
-      <div class="card-title">分享與編輯設定</div>
+      <div class="card-title">房間資訊與編輯設定</div>
       <div class="form-grid" style="grid-template-columns: 1.2fr 1fr 1fr 1fr;">
         <div>
           <label for="shareLink">分享連結</label>
@@ -287,18 +287,18 @@
         </div>
         <div>
           <label for="editPassword">編輯密碼</label>
-          <input id="editPassword" type="password" placeholder="建立或輸入編輯密碼" />
+          <input id="editPassword" type="password" placeholder="輸入密碼以解鎖" />
         </div>
         <div>
           <label>&nbsp;</label>
-          <button class="btn-primary" id="savePasswordBtn" style="width:100%;">儲存密碼</button>
+          <button class="btn-primary" id="savePasswordBtn" style="width:100%;">變更密碼</button>
         </div>
         <div>
           <label>&nbsp;</label>
           <button class="btn-secondary" id="verifyPasswordBtn" style="width:100%;">解鎖編輯</button>
         </div>
       </div>
-      <div class="small">預設任何拿到連結的人都能看。要修改資料，需輸入正確編輯密碼。</div>
+      <div class="small">只有輸入正確密碼後，才能新增、修改、刪除、拖拉與變更限制。</div>
     </div>
 
     <div class="layout">
@@ -336,8 +336,9 @@
     </div>
 
     <div class="info-box">
-      這版使用 Cloud Firestore 同步資料。若第一次開啟沒有 `?id=`，會自動建立新的房間。
-      隊伍中的人物可雙擊快速編輯。
+      第一次從分享連結打開時，預設為唯讀。<br>
+      隊伍中的人物可雙擊快速編輯。<br>
+      如果你是房主，請妥善保管編輯密碼。
     </div>
   </div>
 
@@ -347,7 +348,6 @@
       getFirestore,
       doc,
       getDoc,
-      setDoc,
       updateDoc,
       serverTimestamp,
       onSnapshot
@@ -370,21 +370,9 @@
       "英雄", "聖騎士", "冰雷", "火毒", "槍神", "拳霸", "其他"
     ];
 
-    const defaultData = () => ({
-      title: "Horntail 組隊",
-      players: [],
-      teams: {
-        A: { members: [], constraints: [{ id: uid(), job: "黑騎士", min: 1 }] },
-        B: { members: [], constraints: [] }
-      },
-      passwordHash: "",
-      createdAt: null,
-      updatedAt: null
-    });
-
     const state = {
       roomId: "",
-      data: defaultData(),
+      data: null,
       draggingPlayerId: null,
       editingPlayerId: null,
       isEditable: false,
@@ -392,9 +380,11 @@
     };
 
     const els = {
+      pageTitle: document.getElementById("pageTitle"),
       modeBadge: document.getElementById("modeBadge"),
       roomIdText: document.getElementById("roomIdText"),
       copyLinkBtn: document.getElementById("copyLinkBtn"),
+      backCreateBtn: document.getElementById("backCreateBtn"),
       unlockBtn: document.getElementById("unlockBtn"),
       lockBtn: document.getElementById("lockBtn"),
       shareLink: document.getElementById("shareLink"),
@@ -414,7 +404,7 @@
 
     bootstrap().catch((err) => {
       console.error(err);
-      alert("Firebase 初始化失敗，請確認 Firestore 與設定是否正確。");
+      alert("初始化失敗，請確認網址有 id 參數，並且 Firestore 設定正常。");
     });
 
     async function bootstrap() {
@@ -436,6 +426,9 @@
 
     function bindEvents() {
       els.copyLinkBtn.addEventListener("click", copyShareLink);
+      els.backCreateBtn.addEventListener("click", () => {
+        window.location.href = "create.html";
+      });
       els.unlockBtn.addEventListener("click", () => els.editPassword.focus());
       els.lockBtn.addEventListener("click", lockEditing);
       els.savePasswordBtn.addEventListener("click", savePassword);
@@ -446,28 +439,22 @@
 
     async function prepareRoom() {
       const url = new URL(window.location.href);
-      let roomId = url.searchParams.get("id");
+      const roomId = url.searchParams.get("id");
 
       if (!roomId) {
-        roomId = uid();
-        url.searchParams.set("id", roomId);
-        history.replaceState({}, "", url.toString());
+        alert("缺少房間 id，將返回建立房間頁面。");
+        window.location.href = "create.html";
+        return;
       }
 
       state.roomId = roomId;
       els.roomIdText.textContent = "房間 ID：" + roomId;
       els.shareLink.value = window.location.href;
 
-      const ref = getRoomRef();
-      const snap = await getDoc(ref);
-
+      const snap = await getDoc(getRoomRef());
       if (!snap.exists()) {
-        const data = defaultData();
-        await setDoc(ref, {
-          ...data,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
+        alert("找不到這個房間，將返回建立房間頁面。");
+        window.location.href = "create.html";
       }
     }
 
@@ -477,6 +464,7 @@
       state.unsubscribe = onSnapshot(getRoomRef(), (snap) => {
         if (!snap.exists()) return;
         state.data = normalizeData(snap.data());
+        els.pageTitle.textContent = state.data.title || "Horntail 組隊小工具";
         renderAll();
       });
     }
@@ -545,19 +533,20 @@
 
     async function savePassword() {
       if (!state.isEditable) {
-        alert("請先解鎖編輯模式後，才能儲存或變更密碼。");
+        alert("請先解鎖編輯模式後，才能變更密碼。");
         return;
       }
 
       const pwd = els.editPassword.value.trim();
       if (!pwd) {
-        alert("請輸入密碼");
+        alert("請輸入新密碼");
         return;
       }
 
       const hash = await sha256(pwd);
       await patchRoom({ passwordHash: hash });
-      alert("密碼已儲存");
+      alert("密碼已更新");
+      els.editPassword.value = "";
     }
 
     async function verifyPassword() {
@@ -571,11 +560,7 @@
       const currentHash = state.data.passwordHash || "";
 
       if (!currentHash) {
-        if (!confirm("目前尚未設定密碼。是否用這組密碼建立第一組編輯密碼？")) return;
-        await patchRoom({ passwordHash: inputHash });
-        state.isEditable = true;
-        updateModeUI();
-        alert("已建立並解鎖編輯模式");
+        alert("此房間尚未設定密碼");
         return;
       }
 
@@ -754,6 +739,7 @@
     }
 
     function renderAll() {
+      if (!state.data) return;
       updateModeUI();
       renderPlayers();
       renderTeam("A", els.teamA);
@@ -838,6 +824,7 @@
       `;
 
       const drop = root.querySelector(`#drop-${teamKey}`);
+
       if (isEditable) {
         drop.addEventListener("dragover", e => {
           e.preventDefault();
