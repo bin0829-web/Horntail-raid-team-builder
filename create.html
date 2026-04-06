@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>建立 Horntail 房間</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
+      background: #f3f6fb;
+      color: #1f2937;
+    }
+    .wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      width: 100%;
+      max-width: 640px;
+      background: #fff;
+      border: 1px solid #dbe3ef;
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      padding: 28px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+    }
+    .sub {
+      color: #6b7280;
+      margin-bottom: 24px;
+      line-height: 1.7;
+    }
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    input {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font: inherit;
+      background: #fff;
+    }
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font: inherit;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+      font-weight: 700;
+    }
+    .info {
+      margin-top: 18px;
+      background: #f8fafc;
+      border: 1px solid #dbe3ef;
+      border-radius: 14px;
+      padding: 14px 16px;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .status {
+      margin-top: 16px;
+      font-size: 14px;
+      color: #2563eb;
+      font-weight: 700;
+      min-height: 22px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>建立 Horntail 房間</h1>
+      <div class="sub">
+        先建立房間名稱與編輯密碼。建立完成後，系統會自動跳到對應的組隊頁面。
+      </div>
+
+      <div class="grid">
+        <div>
+          <label for="roomName">房間名稱</label>
+          <input id="roomName" type="text" placeholder="例如：今晚龍王一團" />
+        </div>
+
+        <div>
+          <label for="password">編輯密碼</label>
+          <input id="password" type="password" placeholder="請輸入編輯密碼" />
+        </div>
+
+        <div>
+          <label for="confirmPassword">確認密碼</label>
+          <input id="confirmPassword" type="password" placeholder="請再輸入一次密碼" />
+        </div>
+
+        <button id="createBtn" class="btn-primary">建立房間</button>
+      </div>
+
+      <div id="status" class="status"></div>
+
+      <div class="info">
+        建立後會產生一個專屬分享連結。<br>
+        有連結的人都可以看；要修改內容，必須輸入你剛設定的密碼。
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA2p-CSfZi-GzYrzQdd1dule99KMI49VeY",
+      authDomain: "horntail-team-tool.firebaseapp.com",
+      projectId: "horntail-team-tool",
+      storageBucket: "horntail-team-tool.firebasestorage.app",
+      messagingSenderId: "130726856752",
+      appId: "1:130726856752:web:0cc428397ba7a6f14805f5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const roomNameEl = document.getElementById("roomName");
+    const passwordEl = document.getElementById("password");
+    const confirmPasswordEl = document.getElementById("confirmPassword");
+    const createBtn = document.getElementById("createBtn");
+    const statusEl = document.getElementById("status");
+
+    createBtn.addEventListener("click", createRoom);
+
+    function uid() {
+      return Math.random().toString(36).slice(2) + Date.now().toString(36);
+    }
+
+    async function sha256(text) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(text);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    async function createRoom() {
+      const title = roomNameEl.value.trim();
+      const password = passwordEl.value.trim();
+      const confirmPassword = confirmPasswordEl.value.trim();
+
+      if (!title) {
+        alert("請輸入房間名稱");
+        return;
+      }
+
+      if (!password) {
+        alert("請輸入編輯密碼");
+        return;
+      }
+
+      if (password.length < 4) {
+        alert("密碼至少 4 碼");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        alert("兩次輸入的密碼不一致");
+        return;
+      }
+
+      createBtn.disabled = true;
+      statusEl.textContent = "建立房間中...";
+
+      try {
+        const roomId = uid();
+        const passwordHash = await sha256(password);
+
+        const data = {
+          title,
+          players: [],
+          teams: {
+            A: {
+              members: [],
+              constraints: [{ id: uid(), job: "黑騎士", min: 1 }]
+            },
+            B: {
+              members: [],
+              constraints: []
+            }
+          },
+          passwordHash,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        };
+
+        await setDoc(doc(db, "horntailRooms", roomId), data);
+
+        statusEl.textContent = "建立成功，跳轉中...";
+        window.location.href = `index.html?id=${encodeURIComponent(roomId)}`;
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "";
+        alert("建立房間失敗，請檢查 Firebase 或 Firestore 規則。");
+      } finally {
+        createBtn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
