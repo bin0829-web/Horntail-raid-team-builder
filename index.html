@@ -233,7 +233,10 @@
           </div>
         </div>
 
-        <button class="btn-primary" id="addPlayerBtn">新增人物</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-primary" id="addPlayerBtn">新增人物</button>
+          <button class="btn-secondary" id="cancelEditBtn" style="display:none;">取消編輯</button>
+        </div>
 
         <div style="height:16px"></div>
         <div class="player-list" id="playerList"></div>
@@ -257,6 +260,7 @@
     ];
 
     const players = [];
+    let editingPlayerId = null;
     const teams = {
       A: { members: [], constraints: [{ id: uid(), job: "黑騎士", min: 1 }] },
       B: { members: [], constraints: [] }
@@ -269,6 +273,7 @@
     const levelInput = document.getElementById("level");
     const powerInput = document.getElementById("power");
     const addPlayerBtn = document.getElementById("addPlayerBtn");
+    const cancelEditBtn = document.getElementById("cancelEditBtn");
     const playerList = document.getElementById("playerList");
     const teamAEl = document.getElementById("teamA");
     const teamBEl = document.getElementById("teamB");
@@ -283,7 +288,8 @@
         jobSelect.appendChild(option);
       });
 
-      addPlayerBtn.addEventListener("click", addPlayer);
+      addPlayerBtn.addEventListener("click", savePlayer);
+      cancelEditBtn.addEventListener("click", cancelEdit);
       renderAll();
     }
 
@@ -291,7 +297,7 @@
       return Math.random().toString(36).slice(2) + Date.now().toString(36);
     }
 
-    function addPlayer() {
+    function savePlayer() {
       const name = nameInput.value.trim();
       const level = Number(levelInput.value);
       const job = jobSelect.value;
@@ -310,14 +316,49 @@
         return;
       }
 
-      players.push({ id: uid(), name, level, job, power });
+      if (editingPlayerId) {
+        const player = players.find(p => p.id === editingPlayerId);
+        if (player) {
+          player.name = name;
+          player.level = level;
+          player.job = job;
+          player.power = power;
+        }
+      } else {
+        players.push({ id: uid(), name, level, job, power });
+      }
 
+      resetForm();
+      renderAll();
+    }
+
+    function editPlayer(playerId) {
+      const player = players.find(p => p.id === playerId);
+      if (!player) return;
+
+      editingPlayerId = playerId;
+      nameInput.value = player.name;
+      levelInput.value = player.level;
+      powerInput.value = player.power;
+      jobSelect.value = player.job;
+      addPlayerBtn.textContent = "儲存修改";
+      cancelEditBtn.style.display = "inline-block";
+      nameInput.focus();
+    }
+
+    function cancelEdit() {
+      resetForm();
+      renderAll();
+    }
+
+    function resetForm() {
+      editingPlayerId = null;
       nameInput.value = "";
       levelInput.value = "";
       powerInput.value = "";
       jobSelect.value = JOB_OPTIONS[0];
-
-      renderAll();
+      addPlayerBtn.textContent = "新增人物";
+      cancelEditBtn.style.display = "none";
     }
 
     function removePlayer(playerId) {
@@ -431,12 +472,14 @@
             <span class="tag">${assigned ? "已編入 " + assigned + " 隊" : "可拖拉 / 可加入"}</span>
             <button class="btn-secondary" ${assigned ? "disabled" : ""} data-add-team="A">加入A</button>
             <button class="btn-secondary" ${assigned ? "disabled" : ""} data-add-team="B">加入B</button>
+            <button class="btn-secondary" data-edit>修改</button>
             <button class="btn-danger">刪除</button>
           </div>
         `;
 
         item.querySelector('[data-add-team="A"]').addEventListener("click", () => moveToTeam(player.id, "A"));
         item.querySelector('[data-add-team="B"]').addEventListener("click", () => moveToTeam(player.id, "B"));
+        item.querySelector('[data-edit]').addEventListener("click", () => editPlayer(player.id));
         item.querySelector('.btn-danger').addEventListener("click", () => removePlayer(player.id));
 
         playerList.appendChild(item);
