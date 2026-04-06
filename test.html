@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>Firebase 測試</title>
+</head>
+<body>
+  <h2>Firebase 測試頁</h2>
+  <button onclick="writeData()">寫入測試資料</button>
+  <button onclick="readData()">讀取資料</button>
+
+  <pre id="output"></pre>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+    import {
+      getFirestore,
+      doc,
+      setDoc,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA2p-CSfZi-GzYrzQdd1dule99KMI49VeY",
+      authDomain: "horntail-team-tool.firebaseapp.com",
+      projectId: "horntail-team-tool",
+      storageBucket: "horntail-team-tool.firebasestorage.app",
+      messagingSenderId: "130726856752",
+      appId: "1:130726856752:web:0cc428397ba7a6f14805f5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.writeData = async function () {
+      await setDoc(doc(db, "test", "demo"), {
+        name: "彬",
+        time: new Date().toISOString()
+      });
+      document.getElementById("output").textContent = "✅ 已寫入資料";
+    };
+
+    window.readData = async function () {
+      const snap = await getDoc(doc(db, "test", "demo"));
+      if (snap.exists()) {
+        document.getElementById("output").textContent =
+          "📦 資料：" + JSON.stringify(snap.data(), null, 2);
+      } else {
+        document.getElementById("output").textContent = "❌ 沒資料";
+      }
+    };
+  </script>
+</body>
+</html>
