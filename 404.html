@@ -10,8 +10,7 @@
       const reserved = ["", "index.html", "404.html", "team-tool", "room"];
 
       if (!reserved.includes(path)) {
-        sessionStorage.setItem("room_slug", path);
-        window.location.replace("/room");
+        window.location.replace("/room/?id=" + encodeURIComponent(path));
       } else {
         window.location.replace("/team-tool");
       }
