@@ -7,13 +7,13 @@
   <script>
     (function () {
       const path = window.location.pathname.replace(/^\/+|\/+$/g, "");
-      const reserved = ["", "index.html", "create.html", "404.html"];
+      const reserved = ["", "index.html", "404.html", "team-tool", "room"];
 
       if (!reserved.includes(path)) {
-        const target = "/index.html?id=" + encodeURIComponent(path);
-        window.location.replace(target);
+        sessionStorage.setItem("room_slug", path);
+        window.location.replace("/room");
       } else {
-        window.location.replace("/create.html");
+        window.location.replace("/team-tool");
       }
     })();
   </script>
