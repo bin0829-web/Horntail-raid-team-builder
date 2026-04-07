@@ -438,25 +438,33 @@
     }
 
     async function prepareRoom() {
-      const url = new URL(window.location.href);
-      const roomId = url.searchParams.get("id");
+  const url = new URL(window.location.href);
 
-      if (!roomId) {
-        alert("缺少房間 id，將返回建立房間頁面。");
-        window.location.href = "create.html";
-        return;
-      }
+  let roomId = url.searchParams.get("id");
 
-      state.roomId = roomId;
-      els.roomIdText.textContent = "房間 ID：" + roomId;
-      els.shareLink.value = window.location.href;
-
-      const snap = await getDoc(getRoomRef());
-      if (!snap.exists()) {
-        alert("找不到這個房間，將返回建立房間頁面。");
-        window.location.href = "create.html";
-      }
+  if (!roomId) {
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, "");
+    if (path && path !== "index.html" && path !== "create.html") {
+      roomId = decodeURIComponent(path);
     }
+  }
+
+  if (!roomId) {
+    alert("缺少房間 id，將返回建立房間頁面。");
+    window.location.href = "create.html";
+    return;
+  }
+
+  state.roomId = roomId;
+  els.roomIdText.textContent = "房間 ID：" + roomId;
+  els.shareLink.value = `${window.location.origin}/${encodeURIComponent(roomId)}`;
+
+  const snap = await getDoc(getRoomRef());
+  if (!snap.exists()) {
+    alert("找不到這個房間，將返回建立房間頁面。");
+    window.location.href = "create.html";
+  }
+}
 
     function subscribeRoom() {
       if (state.unsubscribe) state.unsubscribe();
