@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Redirecting...</title>
+  <script>
+    (function () {
+      const path = window.location.pathname.replace(/^\/+|\/+$/g, "");
+      const reserved = ["", "index.html", "create.html", "404.html"];
+
+      if (!reserved.includes(path)) {
+        const target = "/index.html?id=" + encodeURIComponent(path);
+        window.location.replace(target);
+      } else {
+        window.location.replace("/create.html");
+      }
+    })();
+  </script>
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>
