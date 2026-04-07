@@ -534,10 +534,11 @@
     }
 
     function copyShareLink() {
-      navigator.clipboard.writeText(window.location.href)
-        .then(() => alert("已複製分享連結"))
-        .catch(() => alert("複製失敗，請手動複製網址"));
-    }
+  const shareUrl = `${window.location.origin}/${encodeURIComponent(state.roomId)}`;
+  navigator.clipboard.writeText(shareUrl)
+    .then(() => alert("已複製分享連結"))
+    .catch(() => alert("複製失敗，請手動複製網址"));
+}
 
     async function savePassword() {
       if (!state.isEditable) {
